@@ -1,0 +1,12 @@
+# .npmignore
+# Note: with the package.json "files" allowlist ("dist"), only dist/ is
+# published. Keep source/test/config out of the tarball.
+src/
+test/
+examples/
+__tests__
+*.spec.ts
+*.test.ts
+tsconfig*.json
+jest.config.js
+node_modules/
