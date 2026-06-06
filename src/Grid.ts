@@ -1,6 +1,7 @@
 import Square from './Square';
 import Point from './Point';
 import Edge from './Edge';
+import { Coord } from './types';
 
 class Grid {
     size: number;
@@ -114,6 +115,44 @@ class Grid {
      */
     public getSquaresForEdge(edge: Edge): number[] {
         return edge.relatedSquareId;
+    }
+
+    /**
+     * Build the edge for a move, validating it first. Single source of truth
+     * for move geometry: bounds + orthogonal adjacency.
+     */
+    public buildEdge(from: Coord, to: Coord): Edge {
+        const size = this.size;
+        const endpoints: [string, Coord][] = [["from", from], ["to", to]];
+
+        for (const [label, [x, y]] of endpoints) {
+            if (!Number.isInteger(x) || !Number.isInteger(y) ||
+                x < 0 || x >= size || y < 0 || y >= size) {
+                throw new Error(
+                    `Invalid "${label}" coordinate [${x}, ${y}]: out of bounds for a ${size}x${size} grid`
+                );
+            }
+        }
+
+        const [x1, y1] = from;
+        const [x2, y2] = to;
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        if (!((dx === 1 && dy === 0) || (dx === 0 && dy === 1))) {
+            throw new Error(
+                `Dots must be adjacent: [${x1}, ${y1}] -> [${x2}, ${y2}]`
+            );
+        }
+
+        return new Edge(new Point(x1, y1), new Point(x2, y2));
+    }
+
+    /**
+     * Whether the given edge has already been drawn (claimed by a submitter).
+     */
+    public isEdgeDrawn(edge: Edge): boolean {
+        const tracked = this.findEdge(edge.p1, edge.p2);
+        return tracked?.hasOwner() ?? false;
     }
 
     /**

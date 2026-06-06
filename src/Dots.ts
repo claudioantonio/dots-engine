@@ -1,7 +1,6 @@
 import Edge from "./Edge";
 import { GameConstants } from "./GameConstants";
 import Grid from "./Grid";
-import Point from "./Point";
 import { Coord, MoveResult } from "./types";
 
 class Dots {
@@ -29,15 +28,21 @@ class Dots {
      * @param to   End dot as `[x, y]`; must be orthogonally adjacent to `from`.
      * @param submitter EOA address drawing the edge; owns any squares it closes.
      * @returns A {@link MoveResult} describing the outcome of the move.
-     * @throws If the game is over, a coordinate is out of bounds, or the two
-     *         dots are not adjacent.
+     * @throws If the game is over, a coordinate is out of bounds, the two
+     *         dots are not adjacent, or the edge has already been drawn.
      */
     play(from: Coord, to: Coord, submitter: string): MoveResult {
         if (this.isOVer()) {
             throw new Error("Game is over");
         }
 
-        const edge = this.buildEdge(from, to);
+        const edge = this.grid.buildEdge(from, to);
+
+        if (this.grid.isEdgeDrawn(edge)) {
+            const [x1, y1] = from;
+            const [x2, y2] = to;
+            throw new Error(`Edge already drawn: [${x1}, ${y1}] -> [${x2}, ${y2}]`);
+        }
 
         const squaresClosed = this.grid.conquerEdge(edge, submitter);
 
@@ -52,36 +57,6 @@ class Dots {
             submitter,
             status: this.status,
         };
-    }
-
-    /**
-     * Build the edge for a move, validating it first. Single source of truth
-     * for move validation: bounds + orthogonal adjacency.
-     */
-    private buildEdge(from: Coord, to: Coord): Edge {
-        const size = this.grid.size;
-        const endpoints: [string, Coord][] = [["from", from], ["to", to]];
-
-        for (const [label, [x, y]] of endpoints) {
-            if (!Number.isInteger(x) || !Number.isInteger(y) ||
-                x < 0 || x >= size || y < 0 || y >= size) {
-                throw new Error(
-                    `Invalid "${label}" coordinate [${x}, ${y}]: out of bounds for a ${size}x${size} grid`
-                );
-            }
-        }
-
-        const [x1, y1] = from;
-        const [x2, y2] = to;
-        const dx = Math.abs(x2 - x1);
-        const dy = Math.abs(y2 - y1);
-        if (!((dx === 1 && dy === 0) || (dx === 0 && dy === 1))) {
-            throw new Error(
-                `Dots must be adjacent: [${x1}, ${y1}] -> [${x2}, ${y2}]`
-            );
-        }
-
-        return new Edge(new Point(x1, y1), new Point(x2, y2));
     }
 
     getScore() {

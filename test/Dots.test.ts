@@ -90,6 +90,19 @@ describe("Dots.play", () => {
     expect(() => dots.play([0, 0], [0, 2], ALICE)).toThrow(/adjacent/);
   });
 
+  it("rejects an already-drawn edge without mutating state", () => {
+    const dots = new Dots(3);
+    dots.play([0, 0], [0, 1], ALICE);
+
+    expect(() => dots.play([0, 0], [0, 1], BOB)).toThrow(/already drawn/);
+    // reversed orientation is the same edge -> also rejected
+    expect(() => dots.play([0, 1], [0, 0], BOB)).toThrow(/already drawn/);
+
+    // no state change: history length unchanged, no score for BOB
+    expect(dots.playHistory.length).toBe(1);
+    expect(dots.getScore()).toEqual({});
+  });
+
   it("throws when playing after the game is over", () => {
     const dots = new Dots(2);
     dots.play([0, 0], [0, 1], ALICE);
