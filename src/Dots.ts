@@ -4,14 +4,10 @@ import Grid from "./Grid";
 import Point from "./Point";
 import { Coord, MoveResult } from "./types";
 
-class Score {
-    player1: number = 0;
-    player2: number = 0;
-}
-
 class Dots {
     public grid: Grid;
-    score: Score = new Score();
+    /** Squares closed per submitter EOA address. JSON-serializable by design. */
+    scores: Record<string, number> = {};
     status: number = GameConstants.STATUS_NOT_INITIATED;
     playHistory: Edge[] = [];
 
@@ -26,30 +22,34 @@ class Dots {
      * the two-click selection in a UI — is the caller's responsibility, so the
      * engine stays stateless about selection and receives one complete move.
      *
+     * This is a free-for-all: any `submitter` may draw any open edge, and any
+     * square the move closes is owned by that submitter.
+     *
      * @param from Start dot as `[x, y]` (x = column, y = row, 0-based).
      * @param to   End dot as `[x, y]`; must be orthogonally adjacent to `from`.
+     * @param submitter EOA address drawing the edge; owns any squares it closes.
      * @returns A {@link MoveResult} describing the outcome of the move.
      * @throws If the game is over, a coordinate is out of bounds, or the two
      *         dots are not adjacent.
      */
-    play(from: Coord, to: Coord): MoveResult {
+    play(from: Coord, to: Coord, submitter: string): MoveResult {
         if (this.isOVer()) {
             throw new Error("Game is over");
         }
 
         const edge = this.buildEdge(from, to);
 
-        const player = this.getTurn();
-        const squaresClosed = this.grid.conquerEdge(edge, player.toString());
+        const squaresClosed = this.grid.conquerEdge(edge, submitter);
 
-        this.updateScore(player, squaresClosed);
+        if (squaresClosed > 0) {
+            this.addScore(submitter, squaresClosed);
+        }
         this.playHistory.push(edge);
         this.updateStatus();
 
         return {
             squaresClosed,
-            scoredBy: player,
-            nextTurn: this.getTurn(),
+            submitter,
             status: this.status,
         };
     }
@@ -84,13 +84,8 @@ class Dots {
         return new Edge(new Point(x1, y1), new Point(x2, y2));
     }
 
-    getTurn() {
-        const moves = this.playHistory.length;
-        return (moves % 2);
-    }
-
     getScore() {
-        return this.score;
+        return this.scores;
     }
 
     isOVer() {
@@ -99,24 +94,40 @@ class Dots {
     }
 
     isDraw() {
-        return this.score.player1 === this.score.player2;
+        return this.isOVer() && this.getWinner() === null;
     }
 
-    private updateScore(player: number, nClosedSquares: number) {
-        if (player === GameConstants.PLAYER1) {
-            this.score.player1 += nClosedSquares;
-        } else {
-            this.score.player2 += nClosedSquares;
+    /**
+     * The submitter who owns the most closed squares, or `null` when the top
+     * count is shared by two or more addresses (a draw).
+     */
+    getWinner(): string | null {
+        let winner: string | null = null;
+        let topScore = 0;
+        let tied = false;
+
+        for (const [address, score] of Object.entries(this.scores)) {
+            if (score > topScore) {
+                topScore = score;
+                winner = address;
+                tied = false;
+            } else if (score === topScore) {
+                tied = true;
+            }
         }
+
+        return tied ? null : winner;
+    }
+
+    private addScore(submitter: string, nClosedSquares: number) {
+        this.scores[submitter] = (this.scores[submitter] ?? 0) + nClosedSquares;
     }
 
     private updateStatus() {
         if (!this.grid.hasOpenSquare()) {
-            if (this.score.player1 === this.score.player2) {
-                this.status = GameConstants.STATUS_OVER_BY_DRAW;
-            } else {
-                this.status = GameConstants.STATUS_OVER;
-            }
+            this.status = this.getWinner() !== null
+                ? GameConstants.STATUS_OVER
+                : GameConstants.STATUS_OVER_BY_DRAW;
         } else {
             this.status = GameConstants.STATUS_IN_PROGRESS;
         }

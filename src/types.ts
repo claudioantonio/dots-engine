@@ -11,15 +11,13 @@ export type Coord = [number, number];
 /**
  * Outcome of a single {@link Dots.play} call — everything a UI needs to
  * re-render after a move, returned from the one call instead of forcing the
- * caller to diff `getScore()` / `getTurn()` / `isOVer()` by hand.
+ * caller to diff `getScore()` / `isOVer()` by hand.
  */
 export interface MoveResult {
     /** Squares completed by this move (0, 1, or 2). */
     squaresClosed: number;
-    /** Player who made the move (`0` = player 1, `1` = player 2). */
-    scoredBy: number;
-    /** Player whose turn it is now. */
-    nextTurn: number;
+    /** EOA address that submitted this move (owns any squares it closed). */
+    submitter: string;
     /** Game status after the move (see `GameConstants.STATUS_*`). */
     status: number;
 }

@@ -4,13 +4,15 @@ A TypeScript engine for the classic "Dots" game - a paper-and-pencil strategy ga
 
 ## About the Game
 
-Dots is a classic 2-player (or more) strategy game that many people played in school. The game mechanics are simple but engaging:
+Dots is a classic strategy game that many people played in school. This engine
+runs it as a shared, free-for-all board where each move is tagged with the
+submitter's address:
 
-- Players start with a grid of dots on paper
-- Players take turns connecting adjacent dots with horizontal or vertical lines
-- When a player completes a square by connecting the fourth edge, they score a point
+- Start with a grid of dots
+- Anyone connects two adjacent dots with a horizontal or vertical line
+- When a move completes a square (its fourth edge), that square is owned by the submitter
 - The game ends when no more lines can be drawn
-- The player with the most completed squares wins
+- The address with the most completed squares wins
 
 ## Features
 
@@ -18,8 +20,8 @@ The TypeScript engine provides:
 
 - **Complete Game Logic**: Full implementation of the dots game mechanics
 - **Configurable Grid**: Support for different grid sizes (minimum 2x2)
-- **Score Tracking**: Automatic score management for each player
-- **Turn Management**: Alternates between players automatically
+- **Free-for-All Ownership**: Any address can draw any open edge; whoever closes a square owns it
+- **Score Tracking**: Automatic per-address tally of closed squares
 - **Game State Management**: Tracks game status (in progress, over, draw)
 - **Move Validation**: Ensures valid moves and prevents playing after game end
 - **Play History**: Records all moves made during the game
@@ -70,18 +72,19 @@ import { Dots } from "dots-engine";
 
 const dots = new Dots(3); // Create a 3x3 grid (2x2 squares)
 
-// Players take turns connecting two adjacent dots.
-// A dot is a coordinate tuple [x, y] (x = column, y = row, 0-based).
-dots.play([0, 0], [0, 1]); // Connect dots (0,0) and (0,1)
-dots.play([0, 0], [1, 0]); // Connect dots (0,0) and (1,0)
-dots.play([0, 1], [1, 1]); // Connect dots (0,1) and (1,1)
+// It's a free-for-all: anyone can draw any open edge, identified by their
+// address. A dot is a coordinate tuple [x, y] (x = column, y = row, 0-based).
+const alice = "0xAl1ce";
+dots.play([0, 0], [0, 1], alice); // Connect dots (0,0) and (0,1)
+dots.play([0, 0], [1, 0], alice); // Connect dots (0,0) and (1,0)
+dots.play([0, 1], [1, 1], alice); // Connect dots (0,1) and (1,1)
 
 // play() returns what changed, so you can re-render straight from it.
-const result = dots.play([1, 0], [1, 1]); // Completes square 0
-console.log(result); // { squaresClosed: 1, scoredBy: 1, nextTurn: 0, status: 2 }
+const result = dots.play([1, 0], [1, 1], alice); // Completes square 0, owned by alice
+console.log(result); // { squaresClosed: 1, submitter: "0xAl1ce", status: 2 }
 
 console.log("Game over:", dots.isOVer());
-console.log("Score:", dots.getScore());
+console.log("Score:", dots.getScore()); // { "0xAl1ce": 1 }
 ```
 
 ### Advanced Example
@@ -91,15 +94,17 @@ import { Dots } from "dots-engine";
 
 const dots = new Dots(4); // Create a 4x4 grid
 
-// Play a series of moves
-dots.play([0, 0], [0, 1]);
-dots.play([0, 0], [1, 0]);
-dots.play([0, 1], [1, 1]);
-dots.play([1, 0], [1, 1]);
+// Play a series of moves (each tagged with the submitter's address)
+const alice = "0xAl1ce";
+dots.play([0, 0], [0, 1], alice);
+dots.play([0, 0], [1, 0], alice);
+dots.play([0, 1], [1, 1], alice);
+dots.play([1, 0], [1, 1], alice);
 
 console.log("Game over:", dots.isOVer());
 console.log("Score:", dots.getScore());
 console.log("Is draw:", dots.isDraw());
+console.log("Winner:", dots.getWinner());
 
 // Get square position from ID
 const grid = dots.grid;
@@ -128,6 +133,7 @@ import { Dots, type Coord } from "dots-engine";
 
 const dots = new Dots(3);
 let selected: Coord | null = null;
+const myAddress = "0xMe"; // the connected wallet's address
 
 // Call this whenever the user clicks a dot.
 function onDotClick(dot: Coord) {
@@ -136,8 +142,8 @@ function onDotClick(dot: Coord) {
     return;
   }
   try {
-    const result = dots.play(selected, dot); // second click: complete the move
-    // re-render from result.nextTurn / result.status / dots.getScore()
+    const result = dots.play(selected, dot, myAddress); // second click: complete the move
+    // re-render from result.submitter / result.status / dots.getScore()
   } catch (err) {
     // not adjacent / out of bounds — show feedback to the user
   } finally {
@@ -159,14 +165,15 @@ Creates a new game with the specified grid size (minimum 2).
 
 ### Methods
 
-#### `play(from: Coord, to: Coord): MoveResult`
+#### `play(from: Coord, to: Coord, submitter: string): MoveResult`
 Connects two adjacent dots, drawing the edge between them. A `Coord` is a
 `[number, number]` tuple `[x, y]`, where `x` is the column and `y` the row
 (both 0-based). The two dots must be orthogonally adjacent and within grid
-bounds.
+bounds. `submitter` is the address drawing the edge; it owns any squares the
+move closes.
 
 ```typescript
-const result = dots.play([0, 0], [0, 1]);
+const result = dots.play([0, 0], [0, 1], "0xAl1ce");
 ```
 
 Returns a `MoveResult`:
@@ -174,24 +181,26 @@ Returns a `MoveResult`:
 | Field | Type | Meaning |
 |-------|------|---------|
 | `squaresClosed` | `number` | Squares completed by this move (0, 1, or 2). |
-| `scoredBy` | `number` | Player who made the move (`0` = player 1, `1` = player 2). |
-| `nextTurn` | `number` | Player whose turn it is now. |
+| `submitter` | `string` | Address that submitted the move (owns any squares it closed). |
 | `status` | `number` | Game status after the move (see `GameConstants.STATUS_*`). |
 
 Throws if the game is already over, a coordinate is out of bounds, or the two
 dots are not adjacent.
 
 #### `getScore()`
-Returns the current score for both players.
+Returns the score as a map of submitter address to number of closed squares,
+e.g. `{ "0xAl1ce": 3, "0xB0b": 2 }`.
 
 #### `isOVer()`
 Returns `true` if the game has ended.
 
 #### `isDraw()`
-Returns `true` if the game ended in a draw.
+Returns `true` if the game ended with the top square count tied between two or
+more addresses.
 
-#### `getTurn()`
-Returns the current player's turn (0 for player 1, 1 for player 2).
+#### `getWinner()`
+Returns the address owning the most closed squares, or `null` when the top count
+is tied (a draw).
 
 ### Grid Methods
 
