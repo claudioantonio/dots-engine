@@ -197,7 +197,6 @@ class Grid {
                     squaresFound.push(currSquare);
                 }
             });
-            if (currSquare.id > squareIds[squareIds.length - 1]) break;
         }
         return squaresFound;
     }
