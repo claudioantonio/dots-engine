@@ -4,7 +4,7 @@ import Edge from './Edge';
 import { Coord, PlayerId } from './types';
 
 class Grid {
-    size: number;
+    size: number = 0;
     squares: Square[] = [];
     points: Point[] = [];
     uniqueEdges: Edge[] = [];
@@ -15,11 +15,11 @@ class Grid {
      */
     constructor(gridSize: number) {
         if (gridSize < 2) throw new Error("Grid size must be greater or equal to 2");
-        this.size = gridSize;
         this.build(gridSize);
     }
 
     private build(gridSize: number) {
+        this.size = gridSize;
         this.createPoints(gridSize);
         this.createSquares(gridSize);
     }
@@ -40,7 +40,7 @@ class Grid {
             for (let col = 0; col < squaresPerRow; col++) {
                 const squareId = row * squaresPerRow + col;
                 console.log('CreateSquare #' + squareId + ' at position (' + row + ',' + col + ')');
-                let edges: Edge[] = this.createEdges(row, col, gridSize);
+                let edges: Edge[] = this.createEdges(row, col);
                 this.squares.push(
                     new Square(squareId, edges)
                 );
@@ -49,7 +49,7 @@ class Grid {
         console.log('createSquares - created #uniqueEdges=' + this.uniqueEdges.length);
     }
 
-    private createEdges(row: number, col: number, gridSize: number) {
+    private createEdges(row: number, col: number) {
         // Create the four edges for a square at position (row, col)
         // Each edge connects two adjacent points
         let leftEdge: Edge = this.getEdge(
@@ -169,19 +169,6 @@ class Grid {
             }
         }
         return null;
-    }
-
-    /**
-     * Rebuild the board game
-     * Useful to restart a game or start a new game.
-     * 
-     * @param gridSize Number of vertical and horizontal points in grid
-     */
-    public reset(gridSize: number) {
-        this.squares = [];
-        this.points = [];
-        this.uniqueEdges = [];
-        this.build(gridSize);
     }
 
     /**
