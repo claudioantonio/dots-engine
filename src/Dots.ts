@@ -6,13 +6,30 @@ import { Coord, MoveResult, PlayerId } from "./types";
 
 class Dots {
     public grid: Grid;
+    /** The two players in this match; `players[0]` moves first. */
+    public players: [PlayerId, PlayerId];
+    /** Player allowed to submit the next move. */
+    public turn: PlayerId;
     /** Squares closed per submitter. JSON-serializable by design. */
     scores: Record<PlayerId, number> = {};
     status: number = GameConstants.STATUS_NOT_INITIATED;
     playHistory: Edge[] = [];
 
-    constructor(gridsize: number) {
+    /**
+     * @param players The two players, normalized on entry; `players[0]`
+     *        moves first (the first joiner, per the matchmaking queue).
+     * @throws If the two players are not distinct once normalized.
+     */
+    constructor(gridsize: number, players: [string, string]) {
         this.grid = new Grid(gridsize);
+
+        const p1 = normalizePlayerId(players[0]);
+        const p2 = normalizePlayerId(players[1]);
+        if (p1 === p2) {
+            throw new Error(`A match needs two distinct players, got the same player twice: ${p1}`);
+        }
+        this.players = [p1, p2];
+        this.turn = p1;
     }
 
     /**
@@ -31,8 +48,9 @@ class Dots {
      *        squares it closes. Normalized before use, so formatting
      *        differences never affect scoring or the returned `MoveResult`.
      * @returns A {@link MoveResult} describing the outcome of the move.
-     * @throws If the game is over, a coordinate is out of bounds, the two
-     *         dots are not adjacent, or the edge has already been drawn.
+     * @throws If the game is over, `submitter` is not the player on turn, a
+     *         coordinate is out of bounds, the two dots are not adjacent, or
+     *         the edge has already been drawn.
      */
     play(from: Coord, to: Coord, submitter: string): MoveResult {
         if (this.isOVer()) {
@@ -40,6 +58,10 @@ class Dots {
         }
 
         submitter = normalizePlayerId(submitter);
+
+        if (submitter !== this.turn) {
+            throw new Error(`Not this player's turn: expected ${this.turn}, got ${submitter}`);
+        }
 
         const edge = this.grid.buildEdge(from, to);
 
@@ -56,6 +78,7 @@ class Dots {
         }
         this.playHistory.push(edge);
         this.updateStatus();
+        this.turn = this.otherPlayer(submitter);
 
         return {
             squaresClosed,
@@ -101,6 +124,10 @@ class Dots {
 
     private addScore(submitter: PlayerId, nClosedSquares: number) {
         this.scores[submitter] = (this.scores[submitter] ?? 0) + nClosedSquares;
+    }
+
+    private otherPlayer(player: PlayerId): PlayerId {
+        return this.players[0] === player ? this.players[1] : this.players[0];
     }
 
     private updateStatus() {
