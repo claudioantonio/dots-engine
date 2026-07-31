@@ -2,12 +2,12 @@ import { normalizePlayerId } from "./address";
 import Edge from "./Edge";
 import { GameConstants } from "./GameConstants";
 import Grid from "./Grid";
-import { Coord, MoveResult } from "./types";
+import { Coord, MoveResult, PlayerId } from "./types";
 
 class Dots {
     public grid: Grid;
     /** Squares closed per submitter. JSON-serializable by design. */
-    scores: Record<string, number> = {};
+    scores: Record<PlayerId, number> = {};
     status: number = GameConstants.STATUS_NOT_INITIATED;
     playHistory: Edge[] = [];
 
@@ -81,8 +81,8 @@ class Dots {
      * The submitter who owns the most closed squares, or `null` when the top
      * count is shared by two or more addresses (a draw).
      */
-    getWinner(): string | null {
-        let winner: string | null = null;
+    getWinner(): PlayerId | null {
+        let winner: PlayerId | null = null;
         let topScore = 0;
         let tied = false;
 
@@ -99,7 +99,7 @@ class Dots {
         return tied ? null : winner;
     }
 
-    private addScore(submitter: string, nClosedSquares: number) {
+    private addScore(submitter: PlayerId, nClosedSquares: number) {
         this.scores[submitter] = (this.scores[submitter] ?? 0) + nClosedSquares;
     }
 

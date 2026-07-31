@@ -1,7 +1,7 @@
 import Square from './Square';
 import Point from './Point';
 import Edge from './Edge';
-import { Coord } from './types';
+import { Coord, PlayerId } from './types';
 
 class Grid {
     size: number;
@@ -209,7 +209,7 @@ class Grid {
      * 
      * @returns Number of closed squares by closing the edge provided.
      */
-    public conquerEdge(edge: Edge, owner: string) {
+    public conquerEdge(edge: Edge, owner: PlayerId) {
         let nClosedSquares: number = 0;
         for (let i = 0; i < this.uniqueEdges.length; i++) {
             const gameEdge = this.uniqueEdges[i];
@@ -230,7 +230,7 @@ class Grid {
         return nClosedSquares;
     }
 
-    private conquerSquare(availSquaresBeforeClosing: Square[], availSquaresAfterClosing: Square[], owner: string) {
+    private conquerSquare(availSquaresBeforeClosing: Square[], availSquaresAfterClosing: Square[], owner: PlayerId) {
         for (let i = 0; i < availSquaresBeforeClosing.length; i++) {
             let foundSquare: boolean = false;
             for (let j = 0; j < availSquaresAfterClosing.length; j++) {

@@ -1,10 +1,11 @@
 import Edge from './Edge';
+import { PlayerId } from './types';
 
 const SIDES:number = 4;
 
 class Square {
     id: number;
-    owner: string;
+    owner: PlayerId;
     edges: Edge[]; 
 
     constructor(id:number,edges:Edge[]){
