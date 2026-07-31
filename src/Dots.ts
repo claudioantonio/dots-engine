@@ -1,3 +1,4 @@
+import { normalizePlayerId } from "./address";
 import Edge from "./Edge";
 import { GameConstants } from "./GameConstants";
 import Grid from "./Grid";
@@ -5,7 +6,7 @@ import { Coord, MoveResult } from "./types";
 
 class Dots {
     public grid: Grid;
-    /** Squares closed per submitter EOA address. JSON-serializable by design. */
+    /** Squares closed per submitter. JSON-serializable by design. */
     scores: Record<string, number> = {};
     status: number = GameConstants.STATUS_NOT_INITIATED;
     playHistory: Edge[] = [];
@@ -26,7 +27,9 @@ class Dots {
      *
      * @param from Start dot as `[x, y]` (x = column, y = row, 0-based).
      * @param to   End dot as `[x, y]`; must be orthogonally adjacent to `from`.
-     * @param submitter EOA address drawing the edge; owns any squares it closes.
+     * @param submitter Identifier of the player drawing the edge; owns any
+     *        squares it closes. Normalized before use, so formatting
+     *        differences never affect scoring or the returned `MoveResult`.
      * @returns A {@link MoveResult} describing the outcome of the move.
      * @throws If the game is over, a coordinate is out of bounds, the two
      *         dots are not adjacent, or the edge has already been drawn.
@@ -35,6 +38,8 @@ class Dots {
         if (this.isOVer()) {
             throw new Error("Game is over");
         }
+
+        submitter = normalizePlayerId(submitter);
 
         const edge = this.grid.buildEdge(from, to);
 

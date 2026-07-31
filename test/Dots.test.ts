@@ -1,8 +1,8 @@
 import Dots from "../src/Dots";
 import { GameConstants } from "../src/GameConstants";
 
-const ALICE = "0xAl1ce";
-const BOB = "0xB0b";
+const ALICE = "0xal1ce";
+const BOB = "0xb0b";
 
 describe("Dots.play", () => {
   it("accepts a move as two coordinate tuples and records it", () => {
@@ -30,6 +30,21 @@ describe("Dots.play", () => {
     expect(dots.getWinner()).toBe(BOB);
     expect(dots.getScore()).toEqual({ [BOB]: 1 });
     expect(dots.grid.squares[0].owner).toBe(BOB);
+  });
+
+  it("normalizes submitter casing so the same player collapses to one score bucket", () => {
+    const dots = new Dots(2); // a single square
+    const ALICE_LOWER = ALICE.toLowerCase();
+    const ALICE_UPPER = ALICE.toUpperCase();
+
+    dots.play([0, 0], [0, 1], ALICE_LOWER);
+    dots.play([0, 1], [1, 1], ALICE_UPPER);
+    dots.play([1, 1], [1, 0], ALICE_LOWER);
+    const closing = dots.play([1, 0], [0, 0], ALICE_UPPER); // closes the square
+
+    expect(closing.submitter).toBe(ALICE_LOWER);
+    expect(dots.getScore()).toEqual({ [ALICE_LOWER]: 1 });
+    expect(dots.grid.squares[0].owner).toBe(ALICE_LOWER);
   });
 
   it("tallies squares per address across multiple submitters", () => {
