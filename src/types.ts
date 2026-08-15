@@ -17,6 +17,34 @@ export type Coord = [number, number];
 export type PlayerId = string;
 
 /**
+ * A match identifier, opaque to game logic. Assigned once per match by
+ * whoever constructs the engine (today: tests; later: the Match
+ * orchestrator).
+ */
+export type MatchId = string;
+
+/**
+ * One applied move, in canonical form. Doubles as the per-move notice
+ * payload (F6) and, as a log, the replay input — the shape is shared on
+ * purpose so the two never drift.
+ */
+export interface MoveRecord {
+    matchId: MatchId;
+    /** 0-based position of this move within the match's move log. */
+    moveIndex: number;
+    /** The move exactly as submitted: `[from, to]`. */
+    edge: [Coord, Coord];
+    /** Identifier of the player who submitted this move; already normalized. */
+    submitter: PlayerId;
+    /** Squares completed by this move (0, 1, or 2). */
+    squaresClosed: number;
+    /** Player on turn immediately after this move resolved. */
+    turnAfter: PlayerId;
+    /** Input-metadata timestamp of this move (never wall-clock). */
+    timestamp: number;
+}
+
+/**
  * Outcome of a single {@link Dots.play} call — everything a UI needs to
  * re-render after a move, returned from the one call instead of forcing the
  * caller to diff `getScore()` / `isOVer()` by hand.

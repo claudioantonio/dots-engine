@@ -1,11 +1,12 @@
 import { normalizePlayerId } from "./address";
-import Edge from "./Edge";
 import { GameConstants } from "./GameConstants";
 import Grid from "./Grid";
-import { Coord, MoveResult, PlayerId } from "./types";
+import { Coord, MatchId, MoveRecord, MoveResult, PlayerId } from "./types";
 
 class Dots {
     public grid: Grid;
+    /** Identifier of this match; stamped onto every {@link MoveRecord}. */
+    public matchId: MatchId;
     /** The two players in this match; `players[0]` moves first. */
     public players: [PlayerId, PlayerId];
     /** Player allowed to submit the next move. */
@@ -13,15 +14,19 @@ class Dots {
     /** Squares closed per submitter. JSON-serializable by design. */
     scores: Record<PlayerId, number> = {};
     status: number = GameConstants.STATUS_NOT_INITIATED;
-    playHistory: Edge[] = [];
+    /** Full move history — simultaneously the per-move notice payload and the replay input (F6). */
+    moveLog: MoveRecord[] = [];
 
     /**
+     * @param matchId Identifier of this match, assigned by the caller
+     *        (today: tests; later: the Match orchestrator).
      * @param players The two players, normalized on entry; `players[0]`
      *        moves first (the first joiner, per the matchmaking queue).
      * @throws If the two players are not distinct once normalized.
      */
-    constructor(gridsize: number, players: [string, string]) {
+    constructor(gridsize: number, players: [string, string], matchId: MatchId) {
         this.grid = new Grid(gridsize);
+        this.matchId = matchId;
 
         const p1 = normalizePlayerId(players[0]);
         const p2 = normalizePlayerId(players[1]);
@@ -47,12 +52,14 @@ class Dots {
      * @param submitter Identifier of the player drawing the edge; owns any
      *        squares it closes. Normalized before use, so formatting
      *        differences never affect scoring or the returned `MoveResult`.
+     * @param timestamp Input-metadata timestamp of this move (never
+     *        wall-clock); stamped onto the resulting `MoveRecord`.
      * @returns A {@link MoveResult} describing the outcome of the move.
      * @throws If the game is over, `submitter` is not the player on turn, a
      *         coordinate is out of bounds, the two dots are not adjacent, or
      *         the edge has already been drawn.
      */
-    play(from: Coord, to: Coord, submitter: string): MoveResult {
+    play(from: Coord, to: Coord, submitter: string, timestamp: number): MoveResult {
         if (this.isOVer()) {
             throw new Error("Game is over");
         }
@@ -76,9 +83,18 @@ class Dots {
         if (squaresClosed > 0) {
             this.addScore(submitter, squaresClosed);
         }
-        this.playHistory.push(edge);
         this.updateStatus();
         this.turn = this.otherPlayer(submitter);
+
+        this.moveLog.push({
+            matchId: this.matchId,
+            moveIndex: this.moveLog.length,
+            edge: [from, to],
+            submitter,
+            squaresClosed,
+            turnAfter: this.turn,
+            timestamp,
+        });
 
         return {
             squaresClosed,
