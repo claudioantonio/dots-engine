@@ -47,6 +47,9 @@ class Dots {
      * This is a free-for-all: any `submitter` may draw any open edge, and any
      * square the move closes is owned by that submitter.
      *
+     * Extra move on close: a move that closes one or two squares keeps the
+     * turn with the same player instead of alternating (PRD-v5 §6.4).
+     *
      * @param from Start dot as `[x, y]` (x = column, y = row, 0-based).
      * @param to   End dot as `[x, y]`; must be orthogonally adjacent to `from`.
      * @param submitter Identifier of the player drawing the edge; owns any
@@ -84,7 +87,9 @@ class Dots {
             this.addScore(submitter, squaresClosed);
         }
         this.updateStatus();
-        this.turn = this.otherPlayer(submitter);
+        if (squaresClosed === 0) {
+            this.turn = this.otherPlayer(submitter);
+        }
 
         this.moveLog.push({
             matchId: this.matchId,
