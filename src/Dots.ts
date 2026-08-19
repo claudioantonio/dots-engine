@@ -13,6 +13,10 @@ class Dots {
     public turn: PlayerId;
     /** Squares closed per submitter. JSON-serializable by design. */
     scores: Record<PlayerId, number> = {};
+    /** Squares closed so far in the current uninterrupted turn; reset when the turn changes. */
+    private chainCounter: number = 0;
+    /** Each player's longest uninterrupted-turn chain this match (king-of-the-chain). */
+    longestChain: Record<PlayerId, number> = {};
     status: number = GameConstants.STATUS_NOT_INITIATED;
     /** Full move history — simultaneously the per-move notice payload and the replay input (F6). */
     moveLog: MoveRecord[] = [];
@@ -85,10 +89,17 @@ class Dots {
 
         if (squaresClosed > 0) {
             this.addScore(submitter, squaresClosed);
+            this.chainCounter += squaresClosed;
+            // Update the max here, not on turn change: the move that ends the
+            // match closes squares without ever flipping the turn, so a
+            // turn-change-gated update would silently drop the final chain.
+            this.longestChain[submitter] = Math.max(this.longestChain[submitter] ?? 0, this.chainCounter);
         }
         this.updateStatus();
         if (squaresClosed === 0) {
+            // The turn can only flip when nothing was closed
             this.turn = this.otherPlayer(submitter);
+            this.chainCounter = 0;
         }
 
         this.moveLog.push({
@@ -110,6 +121,11 @@ class Dots {
 
     getScore() {
         return this.scores;
+    }
+
+    /** Each player's longest uninterrupted-turn chain this match so far. */
+    getLongestChain() {
+        return this.longestChain;
     }
 
     isOVer() {
