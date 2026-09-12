@@ -8,16 +8,16 @@ console.log("Playing moves on a 3x3 grid...\n");
 
 // A move connects two adjacent dots. Each dot is a [x, y] tuple. Players
 // strictly alternate; whoever closes a square owns it, so each move carries
-// a submitter EOA address and an input-metadata timestamp.
-const moves: [Coord, Coord, string, number][] = [
-    [[0, 0], [0, 1], alice, 1000],
-    [[0, 0], [1, 0], bob, 1001],
-    [[0, 1], [1, 1], alice, 1002],
-    [[1, 0], [1, 1], bob, 1003], // closes square 0 -> owned by bob
+// a submitter EOA address.
+const moves: [Coord, Coord, string][] = [
+    [[0, 0], [0, 1], alice],
+    [[0, 0], [1, 0], bob],
+    [[0, 1], [1, 1], alice],
+    [[1, 0], [1, 1], bob], // closes square 0 -> owned by bob
 ];
 
-for (const [from, to, submitter, timestamp] of moves) {
-    const result = dots.play(from, to, submitter, timestamp);
+for (const [from, to, submitter] of moves) {
+    const result = dots.play(from, to, submitter);
     console.log(`play(${JSON.stringify(from)}, ${JSON.stringify(to)}, ${submitter}) ->`, result);
 }
 

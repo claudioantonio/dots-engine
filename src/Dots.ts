@@ -48,8 +48,8 @@ class Dots {
      * the two-click selection in a UI — is the caller's responsibility, so the
      * engine stays stateless about selection and receives one complete move.
      *
-     * This is a free-for-all: any `submitter` may draw any open edge, and any
-     * square the move closes is owned by that submitter.
+     * Only the player currently on turn may draw an edge, and any square the
+     * move closes is owned by that player.
      *
      * Extra move on close: a move that closes one or two squares keeps the
      * turn with the same player instead of alternating (PRD-v5 §6.4).
@@ -59,14 +59,12 @@ class Dots {
      * @param submitter Identifier of the player drawing the edge; owns any
      *        squares it closes. Normalized before use, so formatting
      *        differences never affect scoring or the returned `MoveResult`.
-     * @param timestamp Input-metadata timestamp of this move (never
-     *        wall-clock); stamped onto the resulting `MoveRecord`.
      * @returns A {@link MoveResult} describing the outcome of the move.
      * @throws If the game is over, `submitter` is not the player on turn, a
      *         coordinate is out of bounds, the two dots are not adjacent, or
      *         the edge has already been drawn.
      */
-    play(from: Coord, to: Coord, submitter: string, timestamp: number): MoveResult {
+    play(from: Coord, to: Coord, submitter: string): MoveResult {
         if (this.isOVer()) {
             throw new Error("Game is over");
         }
@@ -109,7 +107,6 @@ class Dots {
             submitter,
             squaresClosed,
             turnAfter: this.turn,
-            timestamp,
         });
 
         return {

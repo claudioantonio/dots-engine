@@ -40,8 +40,6 @@ export interface MoveRecord {
     squaresClosed: number;
     /** Player on turn immediately after this move resolved. */
     turnAfter: PlayerId;
-    /** Input-metadata timestamp of this move (never wall-clock). */
-    timestamp: number;
 }
 
 /**
