@@ -6,9 +6,7 @@ Deeper background for working on this repo. See `AGENTS.md` for commands/layout/
 
 A pure-logic engine for 1v1 "Dots" matches, designed to be **deterministic**
 so it can run in decentralized/blockchain contexts: the same move log must
-produce byte-identical output wherever it's executed — a smart contract, an
-off-chain verifier, a browser replay, or any other environment a
-decentralized application might run this engine in. This isn't tied to any
+produce byte-identical output wherever it's executed. This isn't tied to any
 one chain, VM, or rollup architecture; determinism is a portability
 guarantee, not a feature for a specific platform.
 
